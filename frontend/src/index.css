@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-panel text-gray-200;
+  font-feature-settings: 'tnum'; /* tabular numbers keep columns aligned */
+}
