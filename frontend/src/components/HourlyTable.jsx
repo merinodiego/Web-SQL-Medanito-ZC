@@ -1,10 +1,22 @@
 import { Fragment } from 'react';
 import { formatValue } from '../utils/format';
 
-// Dense "últimas 24 h" table: one row per (hour × point).
-// columns: [{ key, label, unit, decimals }]
-// rows:    [{ fecha, hora, bateria, punto, tipo, values: { <key>: number } }]
-export default function HourlyTable({ columns, rows, onRowClick, selected }) {
+// Dense "últimas 24 h" table: one row per (hour × point). Reused by Producción
+// and Inyección. Extra descriptor columns are passed via metaBefore/metaAfter
+// (rendered around the Punto column), so each page adds only what it has.
+//
+// columns:     [{ key, label, unit, decimals }]  (the variables)
+// rows:        [{ fecha, hora, punto, values: { <key>: number }, ...extra }]
+// metaBefore:  [{ label, get(row) }]  columns between Hora and Punto (e.g. Batería)
+// metaAfter:   [{ label, get(row) }]  columns after Punto (e.g. Tipo)
+export default function HourlyTable({
+  columns,
+  rows,
+  onRowClick,
+  selected,
+  metaBefore = [],
+  metaAfter = [],
+}) {
   let prevTs = null;
   return (
     <div className="overflow-auto rounded-lg border border-line">
@@ -13,13 +25,21 @@ export default function HourlyTable({ columns, rows, onRowClick, selected }) {
           <tr>
             <th className="px-3 py-2 text-left font-medium">Fecha</th>
             <th className="px-3 py-2 text-left font-medium">Hora</th>
-            <th className="px-3 py-2 text-left font-medium">Batería</th>
+            {metaBefore.map((m) => (
+              <th key={m.label} className="px-3 py-2 text-left font-medium">
+                {m.label}
+              </th>
+            ))}
             <th className="px-3 py-2 text-left font-medium">Punto</th>
-            <th className="px-3 py-2 text-left font-medium">Tipo</th>
+            {metaAfter.map((m) => (
+              <th key={m.label} className="px-3 py-2 text-left font-medium">
+                {m.label}
+              </th>
+            ))}
             {columns.map((c) => (
               <th key={c.key} className="px-3 py-2 text-right font-medium">
                 {c.label}
-                <span className="ml-1 text-[10px] text-gray-600">{c.unit}</span>
+                {c.unit && <span className="ml-1 text-[10px] text-gray-600">{c.unit}</span>}
               </th>
             ))}
           </tr>
@@ -41,7 +61,11 @@ export default function HourlyTable({ columns, rows, onRowClick, selected }) {
                 >
                   <td className="px-3 py-1.5 text-gray-500">{row.fecha}</td>
                   <td className="px-3 py-1.5 text-gray-300 tabular-nums">{row.hora}</td>
-                  <td className="px-3 py-1.5 text-gray-400">Batería {row.bateria}</td>
+                  {metaBefore.map((m) => (
+                    <td key={m.label} className="px-3 py-1.5 text-gray-400">
+                      {m.get(row)}
+                    </td>
+                  ))}
                   <td className="px-3 py-1.5 font-medium text-gray-200">
                     <span
                       className={`mr-2 inline-block h-2 w-2 rounded-full ${
@@ -50,7 +74,11 @@ export default function HourlyTable({ columns, rows, onRowClick, selected }) {
                     />
                     {row.punto}
                   </td>
-                  <td className="px-3 py-1.5 text-gray-400">{row.tipo}</td>
+                  {metaAfter.map((m) => (
+                    <td key={m.label} className="px-3 py-1.5 text-gray-400">
+                      {m.get(row)}
+                    </td>
+                  ))}
                   {columns.map((c) => {
                     const v = row.values[c.key];
                     const isFlow = c.key === 'FQI';

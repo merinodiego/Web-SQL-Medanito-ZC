@@ -5,7 +5,9 @@
 // momentarily unreachable, requests fail with a clean error while it's down,
 // and the next request reconnects automatically once it's back. This matters on
 // an intranet where the DB host may restart independently of the portal.
-require('dotenv').config();
+// Load .env from this file's own folder, so it works regardless of the cwd from
+// which node was launched (manual run, NSSM service, etc.).
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const sql = require('mssql');
 
 const useInstance = Boolean(process.env.DB_INSTANCE);

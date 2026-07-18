@@ -114,6 +114,8 @@ export default function Produccion() {
             rows={rows}
             selected={selected?.punto}
             onRowClick={setSelected}
+            metaBefore={[{ label: 'Batería', get: (r) => `Batería ${r.bateria}` }]}
+            metaAfter={[{ label: 'Tipo', get: (r) => r.tipo }]}
           />
         </>
       )}

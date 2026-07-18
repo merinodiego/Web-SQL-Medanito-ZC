@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import NavBar from './components/NavBar.jsx';
 import Login from './pages/Login.jsx';
 import Produccion from './pages/Produccion.jsx';
+import Inyeccion from './pages/Inyeccion.jsx';
 import Placeholder from './pages/Placeholder.jsx';
 
 export default function App() {
@@ -15,10 +16,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/produccion" element={<Produccion />} />
-          <Route
-            path="/inyeccion"
-            element={<Placeholder titulo="Inyección" detalle="Agua, gas y químicos por punto" />}
-          />
+          <Route path="/inyeccion" element={<Inyeccion />} />
           <Route
             path="/equipos"
             element={<Placeholder titulo="Equipos" detalle="Estado operativo y alarmas" />}
