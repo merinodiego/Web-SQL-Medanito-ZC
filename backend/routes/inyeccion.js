@@ -13,12 +13,12 @@ const TABLE = 'Inyeccion';
 const qTable = `[${SCHEMA}].[${TABLE}]`;
 
 // Variables shown, in column order.
-// NOTE (a confirmar): FQINV parece un totalizador/acumulado histórico.
+// FQINV = inventario / total acumulado en la vida del medidor (totalizador).
 const TAGS = {
   FQI: { label: 'Caudal', unit: 'm³/h', decimals: 1 },
   FQH: { label: 'Vol. Hoy', unit: 'm³', decimals: 1 },
   FQA: { label: 'Vol. Ayer', unit: 'm³', decimals: 1 },
-  FQINV: { label: 'Acumulado', unit: 'm³', decimals: 0 },
+  FQINV: { label: 'Inventario', unit: 'm³', decimals: 0 },
   PI: { label: 'Presión', unit: 'kg/cm²', decimals: 1 },
 };
 const VARIABLES = Object.entries(TAGS).map(([key, d]) => ({ key, ...d }));
