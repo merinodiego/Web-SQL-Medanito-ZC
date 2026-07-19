@@ -21,11 +21,14 @@ function col(name) {
   return `[${name}]`;
 }
 
-// Combine date + time columns into a timestamp string in server local time.
+// Combine date + time columns into a timestamp string. The mssql driver returns
+// `date`/`time` values tagged as UTC midnight/epoch, so we read them with UTC
+// getters to recover the exact wall-clock value stored (using local getters would
+// shift the date a day in negative-offset timezones like AR/UTC-3).
 function buildTimestamp(fecha, hora) {
   if (!fecha) return null;
   const d = new Date(fecha);
-  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const date = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
   let time = '00:00:00';
   if (hora instanceof Date) {
     time = hora.toISOString().substr(11, 8); // time(7) comes back as a Date at epoch
