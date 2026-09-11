@@ -21,10 +21,10 @@ const TANQUES = {
 };
 // Columnas (tanques) del screener de niveles, en orden. key = sufijo del LI_.
 const TANQUE_VARS = [
-  { key: '21', label: 'Tanque A', unit: '', decimals: 1 },
-  { key: '22', label: 'Tanque B', unit: '', decimals: 1 },
-  { key: '23', label: 'Tanque C', unit: '', decimals: 1 },
-  { key: '24', label: 'Tanque D', unit: '', decimals: 1 },
+  { key: '21', label: 'Tanque A', unit: 'cm', decimals: 1 },
+  { key: '22', label: 'Tanque B', unit: 'cm', decimals: 1 },
+  { key: '23', label: 'Tanque C', unit: 'cm', decimals: 1 },
+  { key: '24', label: 'Tanque D', unit: 'cm', decimals: 1 },
 ];
 
 // Combine the date + time columns into a single timestamp string. The mssql
