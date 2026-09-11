@@ -34,7 +34,10 @@ if ($LASTEXITCODE -eq 0) {
   Start-Sleep -Seconds 1
 }
 
-& $nssm install $svc $node $app
+# Se pasa index.js RELATIVO + AppDirectory=backend: así el path del script no
+# lleva espacios en la línea de comando del servicio (el espacio de "Web SQL"
+# rompía el arranque si se pasaba la ruta absoluta como parámetro).
+& $nssm install $svc $node 'index.js'
 & $nssm set $svc AppDirectory $dir
 & $nssm set $svc DisplayName 'Portal de Datos SCADA'
 & $nssm set $svc Description 'Portal web interno de datos SCADA (solo lectura)'
