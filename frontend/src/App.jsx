@@ -3,6 +3,7 @@ import NavBar from './components/NavBar.jsx';
 import Login from './pages/Login.jsx';
 import Produccion from './pages/Produccion.jsx';
 import Inyeccion from './pages/Inyeccion.jsx';
+import Equipos from './pages/Equipos.jsx';
 import Placeholder from './pages/Placeholder.jsx';
 
 export default function App() {
@@ -17,10 +18,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/produccion" element={<Produccion />} />
           <Route path="/inyeccion" element={<Inyeccion />} />
-          <Route
-            path="/equipos"
-            element={<Placeholder titulo="Equipos" detalle="Estado operativo y alarmas" />}
-          />
+          <Route path="/equipos" element={<Equipos />} />
           <Route
             path="/gestion"
             element={<Placeholder titulo="Gestión" detalle="KPIs y eficiencia de campo" />}
