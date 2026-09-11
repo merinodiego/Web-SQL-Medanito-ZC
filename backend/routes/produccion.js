@@ -184,6 +184,49 @@ router.get('/tanques24h', async (_req, res) => {
   }
 });
 
+// GET /api/produccion/tanques-historico?bateria=2&desde=...&hasta=...
+// Serie temporal de los niveles de tanque (A/B/C/D) de una batería.
+router.get('/tanques-historico', async (req, res) => {
+  try {
+    const { bateria, desde, hasta } = req.query;
+    const bat = parseInt(bateria, 10);
+    if (!TANQUES[bat]) {
+      return res.status(400).json({ error: 'Batería inválida o sin tanques' });
+    }
+
+    const tankCols = TANQUES[bat];
+    const selectCols = ['[Fecha]', '[Hora]', ...tankCols.map(col)].join(', ');
+
+    const pool = await getPool();
+    const result = await pool
+      .request()
+      .input('desde', sql.Date, desde)
+      .input('hasta', sql.Date, hasta)
+      .query(`
+        SELECT ${selectCols}
+        FROM ${qTable}
+        WHERE [Fecha] BETWEEN @desde AND @hasta
+        ORDER BY [Fecha] ASC, [Hora] ASC
+      `);
+
+    const serie = result.recordset.map((r) => {
+      const pt = { ts: buildTimestamp(r.Fecha, r.Hora) };
+      for (const c of tankCols) pt[c.slice(-2)] = r[c] ?? null; // key = sufijo (21..24)
+      return pt;
+    });
+
+    const usados = tankCols.map((c) => c.slice(-2));
+    res.json({
+      bateria: bat,
+      variables: TANQUE_VARS.filter((v) => usados.includes(v.key)),
+      serie,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al consultar la base de datos' });
+  }
+});
+
 // GET /api/produccion/historico?punto=02010&desde=2020-08-24&hasta=2020-08-26
 // Time series of all known variables for a single measurement point over a range.
 router.get('/historico', async (req, res) => {

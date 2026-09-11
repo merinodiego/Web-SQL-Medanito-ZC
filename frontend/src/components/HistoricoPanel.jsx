@@ -10,21 +10,25 @@ function isoDaysAgo(days) {
 
 // Reusable histórico panel for any wide-table endpoint.
 // endpoint: e.g. '/api/inyeccion/historico'  ·  responds { serie, variables }
-export default function HistoricoPanel({ endpoint, punto, onClose }) {
+// params:   extra query params (e.g. { punto } o { bateria }); las fechas se suman
+// titulo:   encabezado del panel
+export default function HistoricoPanel({ endpoint, params, titulo, onClose }) {
   const [desde, setDesde] = useState(isoDaysAgo(7));
   const [hasta, setHasta] = useState(isoDaysAgo(0));
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
+  const key = JSON.stringify(params);
   const load = useCallback(async () => {
     try {
-      const { data } = await client.get(endpoint, { params: { punto, desde, hasta } });
+      const { data } = await client.get(endpoint, { params: { ...params, desde, hasta } });
       setData(data);
       setError('');
     } catch {
       setError('No se pudo cargar el histórico.');
     }
-  }, [endpoint, punto, desde, hasta]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endpoint, key, desde, hasta]);
 
   useEffect(() => {
     load();
@@ -33,7 +37,7 @@ export default function HistoricoPanel({ endpoint, punto, onClose }) {
   return (
     <div className="mt-5 rounded-lg border border-line bg-panel-2 p-4">
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <h2 className="font-medium text-white">Histórico · Punto {punto}</h2>
+        <h2 className="font-medium text-white">{titulo}</h2>
         <label className="text-xs text-gray-400">
           Desde{' '}
           <input

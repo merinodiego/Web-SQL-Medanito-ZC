@@ -104,7 +104,8 @@ export default function Inyeccion() {
       {selected && (
         <HistoricoPanel
           endpoint="/api/inyeccion/historico"
-          punto={selected.punto}
+          params={{ punto: selected.punto }}
+          titulo={`Histórico · Punto ${selected.punto}`}
           onClose={() => setSelected(null)}
         />
       )}

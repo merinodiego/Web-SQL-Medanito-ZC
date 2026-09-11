@@ -3,7 +3,7 @@ import { formatValue } from '../utils/format';
 // Tank-level table: one row per (hour × battery), columns = tanks A/B/C/D.
 // columns: [{ key, label, unit, decimals }]
 // rows:    [{ fecha, hora, bateria, values: { <key>: number } }]
-export default function TanquesTable({ columns, rows }) {
+export default function TanquesTable({ columns, rows, onRowClick, selected }) {
   let prevTs = null;
   return (
     <div className="overflow-auto rounded-lg border border-line">
@@ -29,7 +29,10 @@ export default function TanquesTable({ columns, rows }) {
             return (
               <tr
                 key={`${ts}-${row.bateria}`}
-                className={newHour ? 'border-t-2 border-line' : 'border-t border-line/30'}
+                onClick={() => onRowClick?.(row)}
+                className={`cursor-pointer hover:bg-panel-2/60 ${
+                  newHour ? 'border-t-2 border-line' : 'border-t border-line/30'
+                } ${selected === row.bateria ? 'bg-amber-500/10' : ''}`}
               >
                 <td className="px-3 py-1.5 text-gray-500">{row.fecha}</td>
                 <td className="px-3 py-1.5 text-gray-300 tabular-nums">{row.hora}</td>

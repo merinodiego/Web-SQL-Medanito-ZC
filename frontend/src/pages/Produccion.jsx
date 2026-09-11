@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import client from '../api/client';
 import HourlyTable from '../components/HourlyTable.jsx';
 import TanquesTable from '../components/TanquesTable.jsx';
+import HistoricoPanel from '../components/HistoricoPanel.jsx';
 import TrendChart from '../components/TrendChart.jsx';
 
 const REFRESH_OPTIONS = [
@@ -17,6 +18,7 @@ export default function Produccion() {
   const [error, setError] = useState('');
   const [refreshMs, setRefreshMs] = useState(0);
   const [selected, setSelected] = useState(null);
+  const [selTanque, setSelTanque] = useState(null); // batería seleccionada (vista tanques)
   const [bateria, setBateria] = useState(null); // null = todas
   const [tipo, setTipo] = useState(null); // null = todos
   const [vista, setVista] = useState('produccion'); // 'produccion' | 'tanques'
@@ -154,11 +156,13 @@ export default function Produccion() {
             tanques && (
               <>
                 <p className="mb-2 text-xs text-gray-500">
-                  Nivel de cada tanque por batería · una fila por hora · en cm
+                  Nivel de cada tanque por batería · una fila por hora · en cm · clic en una fila para ver el histórico
                 </p>
                 <TanquesTable
                   columns={tanques.variables}
                   rows={tanques.rows.filter((r) => bateria === null || r.bateria === bateria)}
+                  selected={selTanque?.bateria}
+                  onRowClick={setSelTanque}
                 />
               </>
             )
@@ -168,6 +172,15 @@ export default function Produccion() {
 
       {vista === 'produccion' && selected && (
         <Historico punto={selected.punto} onClose={() => setSelected(null)} />
+      )}
+
+      {vista === 'tanques' && selTanque && (
+        <HistoricoPanel
+          endpoint="/api/produccion/tanques-historico"
+          params={{ bateria: selTanque.bateria }}
+          titulo={`Niveles de Tanque · Batería ${selTanque.bateria} (cm)`}
+          onClose={() => setSelTanque(null)}
+        />
       )}
     </div>
   );
