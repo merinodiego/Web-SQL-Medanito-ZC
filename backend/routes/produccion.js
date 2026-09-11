@@ -11,6 +11,22 @@ const qTable = `[${SCHEMA}].[${TABLE}]`;
 const BATERIAS_24H = [2, 3, 4, 5];
 const HORAS_24H = 24; // one row per hour is stored, so 24 rows = last 24 hours
 
+// Niveles de tanque por batería (columnas LI_<bat>0<suf> en Horarios_Oil).
+// El sufijo nombra el tanque: 21=A, 22=B, 23=C, 24=D.
+const TANQUES = {
+  2: ['LI_02021', 'LI_02022', 'LI_02023'],
+  3: ['LI_03021', 'LI_03022', 'LI_03023'],
+  4: ['LI_04021', 'LI_04022', 'LI_04023', 'LI_04024'],
+  5: ['LI_05021', 'LI_05022', 'LI_05023', 'LI_05024'],
+};
+// Columnas (tanques) del screener de niveles, en orden. key = sufijo del LI_.
+const TANQUE_VARS = [
+  { key: '21', label: 'Tanque A', unit: '', decimals: 1 },
+  { key: '22', label: 'Tanque B', unit: '', decimals: 1 },
+  { key: '23', label: 'Tanque C', unit: '', decimals: 1 },
+  { key: '24', label: 'Tanque D', unit: '', decimals: 1 },
+];
+
 // Combine the date + time columns into a single timestamp string. The mssql
 // driver tags `date`/`time` values as UTC, so we read them with UTC getters to
 // recover the exact stored wall-clock value (local getters would shift the date
@@ -129,6 +145,39 @@ router.get('/ultimas24h', async (_req, res) => {
     }
 
     res.json({ variables: schema.variables, baterias: BATERIAS_24H, rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al consultar la base de datos' });
+  }
+});
+
+// GET /api/produccion/tanques24h
+// Niveles de tanque de las últimas 24 h, una fila por (hora × batería), con
+// columnas Tanque A/B/C/D (las baterías 2 y 3 tienen solo A/B/C).
+router.get('/tanques24h', async (_req, res) => {
+  try {
+    const pool = await getPool();
+    const allCols = Object.values(TANQUES).flat();
+    const selectCols = ['[Fecha]', '[Hora]', ...allCols.map(col)].join(', ');
+
+    const result = await pool.request().query(`
+      SELECT TOP ${HORAS_24H} ${selectCols}
+      FROM ${qTable}
+      ORDER BY [Fecha] DESC, [Hora] DESC
+    `);
+
+    const rows = [];
+    for (const r of result.recordset) {
+      const ts = buildTimestamp(r.Fecha, r.Hora) || ' ';
+      const [fecha, hora] = ts.split(' ');
+      for (const bat of BATERIAS_24H) {
+        const values = {};
+        for (const c of TANQUES[bat]) values[c.slice(-2)] = r[c] ?? null; // key = sufijo (21..24)
+        rows.push({ fecha, hora, bateria: bat, values });
+      }
+    }
+
+    res.json({ variables: TANQUE_VARS, baterias: BATERIAS_24H, rows });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al consultar la base de datos' });

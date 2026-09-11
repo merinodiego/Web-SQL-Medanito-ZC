@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import client from '../api/client';
 import HourlyTable from '../components/HourlyTable.jsx';
+import TanquesTable from '../components/TanquesTable.jsx';
 import TrendChart from '../components/TrendChart.jsx';
 
 const REFRESH_OPTIONS = [
@@ -12,6 +13,7 @@ const REFRESH_OPTIONS = [
 
 export default function Produccion() {
   const [data, setData] = useState(null);
+  const [tanques, setTanques] = useState(null);
   const [error, setError] = useState('');
   const [refreshMs, setRefreshMs] = useState(0);
   const [selected, setSelected] = useState(null);
@@ -20,8 +22,12 @@ export default function Produccion() {
 
   const load = useCallback(async () => {
     try {
-      const { data } = await client.get('/api/produccion/ultimas24h');
-      setData(data);
+      const [prod, tks] = await Promise.all([
+        client.get('/api/produccion/ultimas24h'),
+        client.get('/api/produccion/tanques24h'),
+      ]);
+      setData(prod.data);
+      setTanques(tks.data);
       setError('');
     } catch {
       setError('No se pudo cargar la vista de 24 h. ¿Backend y base de datos disponibles?');
@@ -117,6 +123,18 @@ export default function Produccion() {
             metaBefore={[{ label: 'Batería', get: (r) => `Batería ${r.bateria}` }]}
             metaAfter={[{ label: 'Tipo', get: (r) => r.tipo }]}
           />
+
+          {tanques && (
+            <>
+              <h2 className="mb-2 mt-6 text-base font-semibold text-white">
+                Niveles de Tanque · Últimas 24 h
+              </h2>
+              <TanquesTable
+                columns={tanques.variables}
+                rows={tanques.rows.filter((r) => bateria === null || r.bateria === bateria)}
+              />
+            </>
+          )}
         </>
       )}
 
