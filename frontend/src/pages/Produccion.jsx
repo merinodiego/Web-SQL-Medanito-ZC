@@ -19,6 +19,7 @@ export default function Produccion() {
   const [selected, setSelected] = useState(null);
   const [bateria, setBateria] = useState(null); // null = todas
   const [tipo, setTipo] = useState(null); // null = todos
+  const [vista, setVista] = useState('produccion'); // 'produccion' | 'tanques'
 
   const load = useCallback(async () => {
     try {
@@ -87,6 +88,27 @@ export default function Produccion() {
 
       {data && (
         <>
+          {/* Selector de vista */}
+          <div className="mb-3 flex items-center gap-2 text-sm">
+            <button
+              onClick={() => setVista('produccion')}
+              className={`rounded px-3 py-1.5 ${
+                vista === 'produccion' ? 'bg-amber-500/20 text-amber-300' : 'text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              Producción
+            </button>
+            <button
+              onClick={() => setVista('tanques')}
+              className={`rounded px-3 py-1.5 ${
+                vista === 'tanques' ? 'bg-amber-500/20 text-amber-300' : 'text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              Niveles de Tanque
+            </button>
+          </div>
+
+          {/* Filtros */}
           <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
             <div className="flex items-center gap-2">
               <span className="text-gray-500">Batería:</span>
@@ -99,46 +121,54 @@ export default function Produccion() {
                 </FilterButton>
               ))}
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-500">Tipo:</span>
-              <FilterButton active={tipo === null} onClick={() => setTipo(null)}>
-                Todos
-              </FilterButton>
-              {tipos.map((t) => (
-                <FilterButton key={t} active={tipo === t} onClick={() => setTipo(t)}>
-                  {t}
+            {vista === 'produccion' && (
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500">Tipo:</span>
+                <FilterButton active={tipo === null} onClick={() => setTipo(null)}>
+                  Todos
                 </FilterButton>
-              ))}
-            </div>
+                {tipos.map((t) => (
+                  <FilterButton key={t} active={tipo === t} onClick={() => setTipo(t)}>
+                    {t}
+                  </FilterButton>
+                ))}
+              </div>
+            )}
           </div>
 
-          <p className="mb-2 text-xs text-gray-500">
-            {rows.length} filas · una por hora y punto · clic en una fila para ver el histórico
-          </p>
-          <HourlyTable
-            columns={data.variables}
-            rows={rows}
-            selected={selected?.punto}
-            onRowClick={setSelected}
-            metaBefore={[{ label: 'Batería', get: (r) => `Batería ${r.bateria}` }]}
-            metaAfter={[{ label: 'Tipo', get: (r) => r.tipo }]}
-          />
-
-          {tanques && (
+          {vista === 'produccion' ? (
             <>
-              <h2 className="mb-2 mt-6 text-base font-semibold text-white">
-                Niveles de Tanque · Últimas 24 h
-              </h2>
-              <TanquesTable
-                columns={tanques.variables}
-                rows={tanques.rows.filter((r) => bateria === null || r.bateria === bateria)}
+              <p className="mb-2 text-xs text-gray-500">
+                {rows.length} filas · una por hora y punto · clic en una fila para ver el histórico
+              </p>
+              <HourlyTable
+                columns={data.variables}
+                rows={rows}
+                selected={selected?.punto}
+                onRowClick={setSelected}
+                metaBefore={[{ label: 'Batería', get: (r) => `Batería ${r.bateria}` }]}
+                metaAfter={[{ label: 'Tipo', get: (r) => r.tipo }]}
               />
             </>
+          ) : (
+            tanques && (
+              <>
+                <p className="mb-2 text-xs text-gray-500">
+                  Nivel de cada tanque por batería · una fila por hora · en cm
+                </p>
+                <TanquesTable
+                  columns={tanques.variables}
+                  rows={tanques.rows.filter((r) => bateria === null || r.bateria === bateria)}
+                />
+              </>
+            )
           )}
         </>
       )}
 
-      {selected && <Historico punto={selected.punto} onClose={() => setSelected(null)} />}
+      {vista === 'produccion' && selected && (
+        <Historico punto={selected.punto} onClose={() => setSelected(null)} />
+      )}
     </div>
   );
 }
