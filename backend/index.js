@@ -11,6 +11,7 @@ const authRoutes = require('./routes/auth');
 const produccionRoutes = require('./routes/produccion');
 const inyeccionRoutes = require('./routes/inyeccion');
 const instantaneosRoutes = require('./routes/instantaneos');
+const watchdogRoutes = require('./routes/watchdog');
 
 const app = express();
 app.use(cors());
@@ -18,6 +19,9 @@ app.use(express.json());
 
 // Health check (unprotected)
 app.get('/api/health', (_req, res) => res.json({ ok: true, authEnabled: AUTH_ENABLED }));
+
+// Watchdog de comunicación (sin auth: indicador de sistema vivo, visible siempre)
+app.use('/api/watchdog', watchdogRoutes);
 
 // Auth
 app.use('/api/auth', authRoutes);

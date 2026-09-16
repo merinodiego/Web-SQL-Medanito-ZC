@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import Watchdog from './Watchdog.jsx';
 
 const links = [
   { to: '/produccion', label: 'Producción' },
@@ -44,8 +45,9 @@ export default function NavBar() {
           </NavLink>
         ))}
       </nav>
+      <Watchdog />
       {authEnabled && (
-        <button onClick={logout} className="ml-auto text-xs text-gray-500 hover:text-gray-300">
+        <button onClick={logout} className="text-xs text-gray-500 hover:text-gray-300">
           Salir
         </button>
       )}
