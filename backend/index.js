@@ -10,6 +10,7 @@ const { requireAuth, AUTH_ENABLED } = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
 const produccionRoutes = require('./routes/produccion');
 const inyeccionRoutes = require('./routes/inyeccion');
+const instantaneosRoutes = require('./routes/instantaneos');
 
 const app = express();
 app.use(cors());
@@ -24,6 +25,7 @@ app.use('/api/auth', authRoutes);
 // Data routes (protected when AUTH_ENABLED=true)
 app.use('/api/produccion', requireAuth, produccionRoutes);
 app.use('/api/inyeccion', requireAuth, inyeccionRoutes);
+app.use('/api/instantaneos', requireAuth, instantaneosRoutes);
 
 // --- Production: serve the built frontend from this same process ---
 // After `cd frontend && npm run build`, the SPA lives in frontend/dist. Serving
