@@ -7,22 +7,31 @@ const router = express.Router();
 const { getPool } = require('../db');
 const { buildTimestamp } = require('../lib/wideTable');
 
-const THRESHOLD_MS = 120000; // 2 min sin actualización → OFFLINE
-let cache = null; // { fecha, hora, scadaMs }
+const THRESHOLD_SEC = 120; // si la marca del SCADA no avanza en 2 min → OFFLINE
+let cache = null; // { fecha, hora, valueKey, lastChangeMs }
 let pollerOn = false;
 
+// Watchdog por AVANCE de la marca (no por comparación de relojes): los relojes de
+// SCADA, SQL y de la máquina Node difieren entre sí, así que cualquier "ahora"
+// absoluto sesga el cálculo. Lo robusto es verificar que la marca Fecha+Hora que
+// escribe el SCADA siga cambiando; si se congela > umbral, el SCADA está caído.
 async function leer() {
   const pool = await getPool();
   const r = await pool.request().query('SELECT TOP 1 [Fecha], [Hora] FROM [dbo].[DBInst]');
   const row = r.recordset[0];
   if (!row) return; // hueco del refresco → mantenemos el caché
-  const ts = buildTimestamp(row.Fecha, row.Hora); // 'YYYY-MM-DD HH:MM:SS' (hora de pared)
+  const ts = buildTimestamp(row.Fecha, row.Hora); // 'YYYY-MM-DD HH:MM:SS'
   if (!ts) return;
   const [fecha, hora] = ts.split(' ');
-  // La app corre en el mismo server que el SCADA → interpretamos la marca en la
-  // hora local del server para compararla con Date.now().
-  const scadaMs = new Date(`${fecha}T${hora}`).getTime();
-  if (!Number.isNaN(scadaMs)) cache = { fecha, hora, scadaMs };
+  const now = Date.now();
+  if (!cache || cache.valueKey !== ts) {
+    // La marca avanzó (o primera lectura) → sistema vivo, reiniciamos el contador.
+    cache = { fecha, hora, valueKey: ts, lastChangeMs: now };
+  } else {
+    // Misma marca (aún dentro del mismo minuto): no tocamos lastChangeMs.
+    cache.fecha = fecha;
+    cache.hora = hora;
+  }
 }
 
 function startPoller() {
@@ -47,13 +56,15 @@ router.get('/', async (_req, res) => {
     if (!cache) {
       return res.json({ online: false, fecha: null, hora: null, ts: null, ageSec: null });
     }
-    const ageMs = Date.now() - cache.scadaMs;
+    // Segundos desde que la marca del SCADA cambió por última vez (solo deltas de
+    // reloj propio, sin comparar contra relojes ajenos).
+    const ageSec = Math.round((Date.now() - cache.lastChangeMs) / 1000);
     res.json({
-      online: ageMs < THRESHOLD_MS,
+      online: ageSec < THRESHOLD_SEC,
       fecha: cache.fecha,
       hora: cache.hora,
       ts: `${cache.fecha}T${cache.hora}`, // el front calcula el día de la semana
-      ageSec: Math.round(ageMs / 1000),
+      ageSec,
     });
   } catch (err) {
     console.error(err);
