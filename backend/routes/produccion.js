@@ -274,4 +274,91 @@ router.get('/historico', async (req, res) => {
   }
 });
 
+// GET /api/produccion/controles?desde=YYYY-MM-DD&hasta=YYYY-MM-DD&pozo=texto
+// Registros de la tabla Controles (control de pozos). Filtro por rango de fechas
+// + búsqueda "contiene" en Pozo. Por defecto, el mes en curso.
+const CONTROLES_MAX = 5000; // tope de filas por consulta
+
+function primerDiaDelMes(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}
+function fechaISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+router.get('/controles', async (req, res) => {
+  try {
+    const hoy = new Date();
+    const desde = req.query.desde || primerDiaDelMes(hoy);
+    const hasta = req.query.hasta || fechaISO(hoy);
+
+    // Búsqueda "contiene" en Pozo. Escapamos los comodines de LIKE (% _ [) para
+    // que el texto del usuario se trate literal; el valor va como parámetro tipado.
+    const termino = (req.query.pozo || '').trim();
+    const termEsc = termino.replace(/[[%_]/g, (m) => `[${m}]`);
+    const bateria = (req.query.bateria || '').trim();
+
+    const pool = await getPool();
+
+    // Filtro opcional por batería (valor exacto del desplegable).
+    const request = pool
+      .request()
+      .input('desde', sql.Date, desde)
+      .input('hasta', sql.Date, hasta)
+      .input('pozo', sql.VarChar, `%${termEsc}%`);
+    let filtroBat = '';
+    if (bateria) {
+      request.input('bateria', sql.VarChar, bateria);
+      filtroBat = 'AND [Bateria] = @bateria';
+    }
+
+    const result = await request.query(`
+      SELECT TOP ${CONTROLES_MAX}
+        [Fecha], [Hora], [Pozo], [Bateria],
+        [Volumen_Oil_Acum], [Volumen_Oil_Proy], [Tiempo_Control],
+        [Volumen_Gas_Acum], [Volumen_Gas_Proy]
+      FROM [dbo].[Controles]
+      WHERE [Fecha] BETWEEN @desde AND @hasta
+        AND [Pozo] LIKE @pozo
+        ${filtroBat}
+      ORDER BY [Fecha] DESC, [Hora] DESC
+    `);
+
+    // Lista de baterías para el desplegable (todas las existentes).
+    const bats = await pool.request().query(
+      `SELECT DISTINCT [Bateria] FROM [dbo].[Controles] WHERE [Bateria] IS NOT NULL AND [Bateria] <> '' ORDER BY [Bateria]`
+    );
+    const baterias = bats.recordset.map((r) => r.Bateria);
+
+    const rows = result.recordset.map((r) => {
+      const [fecha, hora] = (buildTimestamp(r.Fecha, r.Hora) || ' ').split(' ');
+      return {
+        fecha,
+        hora,
+        pozo: r.Pozo,
+        bateria: r.Bateria,
+        oilAcum: r.Volumen_Oil_Acum,
+        oilProy: r.Volumen_Oil_Proy,
+        tiempo: r.Tiempo_Control,
+        gasAcum: r.Volumen_Gas_Acum,
+        gasProy: r.Volumen_Gas_Proy,
+      };
+    });
+
+    res.json({
+      desde,
+      hasta,
+      pozo: termino,
+      bateria,
+      baterias,
+      total: rows.length,
+      capado: rows.length >= CONTROLES_MAX,
+      rows,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al consultar la base de datos' });
+  }
+});
+
 module.exports = router;
