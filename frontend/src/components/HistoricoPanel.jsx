@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import client from '../api/client';
 import TrendChart from './TrendChart.jsx';
+import { exportarSerieCSV, nombreArchivoCSV } from '../utils/csv';
 
 function isoDaysAgo(days) {
   const d = new Date();
@@ -34,6 +35,17 @@ export default function HistoricoPanel({ endpoint, params, titulo, onClose }) {
     load();
   }, [load]);
 
+  const hayDatos = data?.serie?.length > 0;
+  async function exportar() {
+    if (!hayDatos) return;
+    const base = (titulo || 'historico').replace(/^Histórico\s*·?\s*/i, '');
+    await exportarSerieCSV({
+      nombre: nombreArchivoCSV(base, desde, hasta),
+      variables: data.variables,
+      serie: data.serie,
+    });
+  }
+
   return (
     <div className="mt-5 rounded-lg border border-line bg-panel-2 p-4">
       <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -56,6 +68,14 @@ export default function HistoricoPanel({ endpoint, params, titulo, onClose }) {
             className="ml-1 rounded border border-line bg-panel px-2 py-1 text-gray-200"
           />
         </label>
+        <button
+          onClick={exportar}
+          disabled={!hayDatos}
+          className="rounded border border-emerald-600/50 bg-emerald-600/15 px-2 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-600/25 disabled:opacity-40"
+          title="Exportar los datos del gráfico a CSV"
+        >
+          ⬇ Exportar CSV
+        </button>
         <button onClick={onClose} className="ml-auto text-xs text-gray-500 hover:text-gray-300">
           Cerrar ✕
         </button>

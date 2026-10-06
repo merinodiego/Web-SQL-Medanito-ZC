@@ -4,7 +4,6 @@ import HourlyTable from '../components/HourlyTable.jsx';
 import TanquesTable from '../components/TanquesTable.jsx';
 import HistoricoPanel from '../components/HistoricoPanel.jsx';
 import ControlesPanel from '../components/ControlesPanel.jsx';
-import TrendChart from '../components/TrendChart.jsx';
 
 const REFRESH_OPTIONS = [
   { label: 'Manual', ms: 0 },
@@ -184,7 +183,12 @@ export default function Produccion() {
       )}
 
       {vista === 'produccion' && selected && (
-        <Historico punto={selected.punto} onClose={() => setSelected(null)} />
+        <HistoricoPanel
+          endpoint="/api/produccion/historico"
+          params={{ punto: selected.punto }}
+          titulo={`Histórico · Punto ${selected.punto}`}
+          onClose={() => setSelected(null)}
+        />
       )}
 
       {vista === 'tanques' && selTanque && (
@@ -212,68 +216,3 @@ function FilterButton({ active, onClick, children }) {
   );
 }
 
-// --- Histórico panel (shown when a point is selected) ---
-function isoDaysAgo(days) {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
-}
-
-function Historico({ punto, onClose }) {
-  const [desde, setDesde] = useState(isoDaysAgo(7));
-  const [hasta, setHasta] = useState(isoDaysAgo(0));
-  const [data, setData] = useState(null);
-  const [error, setError] = useState('');
-
-  const load = useCallback(async () => {
-    try {
-      const { data } = await client.get('/api/produccion/historico', {
-        params: { punto, desde, hasta },
-      });
-      setData(data);
-      setError('');
-    } catch {
-      setError('No se pudo cargar el histórico.');
-    }
-  }, [punto, desde, hasta]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  return (
-    <div className="mt-5 rounded-lg border border-line bg-panel-2 p-4">
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <h2 className="font-medium text-white">Histórico · Punto {punto}</h2>
-        <label className="text-xs text-gray-400">
-          Desde{' '}
-          <input
-            type="date"
-            value={desde}
-            onChange={(e) => setDesde(e.target.value)}
-            className="ml-1 rounded border border-line bg-panel px-2 py-1 text-gray-200"
-          />
-        </label>
-        <label className="text-xs text-gray-400">
-          Hasta{' '}
-          <input
-            type="date"
-            value={hasta}
-            onChange={(e) => setHasta(e.target.value)}
-            className="ml-1 rounded border border-line bg-panel px-2 py-1 text-gray-200"
-          />
-        </label>
-        <button onClick={onClose} className="ml-auto text-xs text-gray-500 hover:text-gray-300">
-          Cerrar ✕
-        </button>
-      </div>
-      {error ? (
-        <p className="text-sm text-red-300">{error}</p>
-      ) : data ? (
-        <TrendChart data={data.serie} variables={data.variables} />
-      ) : (
-        <p className="text-sm text-gray-500">Cargando…</p>
-      )}
-    </div>
-  );
-}
