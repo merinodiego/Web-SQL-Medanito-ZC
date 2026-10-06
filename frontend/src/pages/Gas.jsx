@@ -15,8 +15,8 @@ export default function Gas() {
   const [error, setError] = useState('');
   const [refreshMs, setRefreshMs] = useState(0);
   const [selected, setSelected] = useState(null);
-  const [bateria, setBateria] = useState(null); // null = todas
-  const [tipo, setTipo] = useState(null); // null = todos
+  const [locacion, setLocacion] = useState(null); // null = todas
+  const [etiqueta, setEtiqueta] = useState(null); // null = todas
 
   const load = useCallback(async () => {
     try {
@@ -38,17 +38,17 @@ export default function Gas() {
     return () => clearInterval(id);
   }, [refreshMs, load]);
 
-  const tipos = data ? [...new Set(data.rows.map((r) => r.tipo))] : [];
-  const rows = data
-    ? data.rows.filter(
-        (r) => (bateria === null || r.bateria === bateria) && (tipo === null || r.tipo === tipo)
-      )
+  // Las etiquetas disponibles dependen de la locación elegida.
+  const porLoc = data
+    ? data.rows.filter((r) => locacion === null || r.locacion === locacion)
     : [];
+  const etiquetas = [...new Set(porLoc.map((r) => r.etiqueta))];
+  const rows = porLoc.filter((r) => etiqueta === null || r.etiqueta === etiqueta);
 
   return (
     <div className="p-5">
       <div className="mb-4 flex flex-wrap items-center gap-4">
-        <h1 className="text-lg font-semibold text-white">Gas · Últimas 24 h (baterías 02–05)</h1>
+        <h1 className="text-lg font-semibold text-white">Gas · Últimas 24 h</h1>
         <div className="ml-auto flex items-center gap-2 text-xs">
           <span className="text-gray-500">Refresco:</span>
           {REFRESH_OPTIONS.map((o) => (
@@ -80,25 +80,38 @@ export default function Gas() {
       {data && (
         <>
           <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-gray-500">Batería:</span>
-              <FilterButton active={bateria === null} onClick={() => setBateria(null)}>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-gray-500">Locación:</span>
+              <FilterButton
+                active={locacion === null}
+                onClick={() => {
+                  setLocacion(null);
+                  setEtiqueta(null);
+                }}
+              >
                 Todas
               </FilterButton>
-              {data.baterias.map((b) => (
-                <FilterButton key={b} active={bateria === b} onClick={() => setBateria(b)}>
-                  {b}
+              {data.locaciones.map((l) => (
+                <FilterButton
+                  key={l}
+                  active={locacion === l}
+                  onClick={() => {
+                    setLocacion(l);
+                    setEtiqueta(null);
+                  }}
+                >
+                  {l}
                 </FilterButton>
               ))}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-gray-500">Tipo:</span>
-              <FilterButton active={tipo === null} onClick={() => setTipo(null)}>
+              <FilterButton active={etiqueta === null} onClick={() => setEtiqueta(null)}>
                 Todos
               </FilterButton>
-              {tipos.map((t) => (
-                <FilterButton key={t} active={tipo === t} onClick={() => setTipo(t)}>
-                  {t}
+              {etiquetas.map((e) => (
+                <FilterButton key={e} active={etiqueta === e} onClick={() => setEtiqueta(e)}>
+                  {e}
                 </FilterButton>
               ))}
             </div>
@@ -112,8 +125,8 @@ export default function Gas() {
             rows={rows}
             selected={selected?.punto}
             onRowClick={setSelected}
-            metaBefore={[{ label: 'Batería', get: (r) => `Batería ${r.bateria}` }]}
-            metaAfter={[{ label: 'Tipo', get: (r) => r.tipo }]}
+            metaBefore={[{ label: 'Locación', get: (r) => r.locacion }]}
+            metaAfter={[{ label: 'Tipo', get: (r) => r.etiqueta }]}
           />
         </>
       )}
@@ -122,7 +135,7 @@ export default function Gas() {
         <HistoricoPanel
           endpoint="/api/gas/historico"
           params={{ punto: selected.punto }}
-          titulo={`Histórico · Punto ${selected.punto}`}
+          titulo={`Histórico · ${selected.locacion} · ${selected.etiqueta} (${selected.punto})`}
           onClose={() => setSelected(null)}
         />
       )}

@@ -1,6 +1,8 @@
 // Gas endpoints — read-only sobre la tabla ancha dbo.Horarios_Gas.
-// Mismo criterio de tags que Petróleo (<PREFIX>_<IDPUNTO>), pero con 5 variables
-// (sin densidad). Por ahora solo las baterías 2-5; luego se suman más locaciones.
+// Mismo criterio de tags que Petróleo (<PREFIX>_<IDPUNTO>) pero con 5 variables
+// (sin densidad). Los puntos en uso se declaran EXPLÍCITAMENTE abajo (locación +
+// etiqueta), porque hay locaciones con nombre (Mariposa, etc.) y etiquetas que no
+// siguen una regla por ID. Se irán sumando más locaciones.
 const express = require('express');
 const router = express.Router();
 const { sql, getPool } = require('../db');
@@ -14,36 +16,49 @@ const TAGS_GAS = {
   TI: { label: 'Temperatura', unit: '°C', decimals: 1 },
 };
 
+// Puntos de Gas en alcance. El ORDEN define el de visualización y filtros.
+const PUNTOS = [
+  { punto: '02001', locacion: 'Batería 2', etiqueta: 'Gas General' },
+  { punto: '02002', locacion: 'Batería 2', etiqueta: 'Gas Consumo' },
+  { punto: '03001', locacion: 'Batería 3', etiqueta: 'Gas General' },
+  { punto: '03002', locacion: 'Batería 3', etiqueta: 'Gas Consumo' },
+  { punto: '04001', locacion: 'Batería 4', etiqueta: 'Gas General' },
+  { punto: '04003', locacion: 'Batería 4', etiqueta: 'Gas General' },
+  { punto: '11001', locacion: 'Batería 5', etiqueta: 'Gas General' },
+  { punto: '05002', locacion: 'Batería 5', etiqueta: 'Gas Consumo' },
+  { punto: '10001', locacion: 'Mariposa', etiqueta: 'Compresor 205' },
+  { punto: '10003', locacion: 'Mariposa', etiqueta: 'Compresor 208' },
+  { punto: '24001', locacion: 'Esquinero y PL', etiqueta: 'Puesto Lara' },
+  { punto: '25001', locacion: 'Esquinero y PL', etiqueta: 'Esquinero' },
+  { punto: '26001', locacion: 'Busquin', etiqueta: 'Gas General' },
+  { punto: '26002', locacion: 'Busquin', etiqueta: 'Gas Control' },
+  // Colector Mariposa (28xxx): descartado por ahora (conflicto a resolver).
+];
+
 const wide = createWideTable({ table: 'Horarios_Gas', schema: 'dbo', tagDefs: TAGS_GAS });
 const { getSchema, col, buildTimestamp, qTable } = wide;
 
-const BATERIAS_GAS = [2, 3, 4, 5]; // por ahora solo estas
 const HORAS_24H = 24;
-const batteryOf = (id) => parseInt(String(id).slice(0, 2), 10);
 
-// Tipo según los 2 últimos dígitos del ID: 01/03 = Gas General, 02 = Gas Control.
-// (Bat 4 es la excepción con dos medidores generales: 01 y 03.)
-function gasTipo(id) {
-  const suf = String(id).slice(-2);
-  if (suf === '01' || suf === '03') return 'Gas General';
-  if (suf === '02') return 'Gas Control';
-  return null; // otras locaciones (se sumarán más adelante)
+// Puntos declarados que realmente existen en la tabla, con sus tags disponibles.
+async function puntosActivos() {
+  const schema = await getSchema();
+  return PUNTOS.filter((p) => schema.points.includes(p.punto)).map((p) => ({
+    ...p,
+    tags: schema.tagsByPoint[p.punto],
+  }));
 }
 
-// Puntos en alcance: baterías 2-5 y tipo reconocido.
-const puntosEnScope = (schema) =>
-  schema.points.filter((p) => BATERIAS_GAS.includes(batteryOf(p)) && gasTipo(p) !== null);
-
-const bateriasDe = (puntos) => [...new Set(puntos.map(batteryOf))].sort((a, b) => a - b);
+const locacionesDe = (activos) => [...new Set(activos.map((p) => p.locacion))];
 
 // GET /api/gas/puntos
 router.get('/puntos', async (_req, res) => {
   try {
     const schema = await getSchema();
-    const puntos = puntosEnScope(schema);
+    const activos = await puntosActivos();
     res.json({
-      puntos: puntos.map((id) => ({ punto: id, bateria: batteryOf(id), tipo: gasTipo(id) })),
-      baterias: bateriasDe(puntos),
+      puntos: activos.map(({ punto, locacion, etiqueta }) => ({ punto, locacion, etiqueta })),
+      locaciones: locacionesDe(activos),
       variables: schema.variables,
     });
   } catch (err) {
@@ -56,11 +71,11 @@ router.get('/puntos', async (_req, res) => {
 router.get('/ultimas24h', async (_req, res) => {
   try {
     const schema = await getSchema();
-    const points = puntosEnScope(schema);
-    if (!points.length) return res.json({ variables: schema.variables, baterias: BATERIAS_GAS, rows: [] });
+    const activos = await puntosActivos();
+    if (!activos.length) return res.json({ variables: schema.variables, locaciones: [], rows: [] });
 
     const dataCols = [];
-    for (const p of points) for (const prefix of schema.tagsByPoint[p]) dataCols.push(`${prefix}_${p}`);
+    for (const p of activos) for (const prefix of p.tags) dataCols.push(`${prefix}_${p.punto}`);
     const selectCols = ['[Fecha]', '[Hora]', ...dataCols.map(col)].join(', ');
 
     const pool = await getPool();
@@ -74,14 +89,14 @@ router.get('/ultimas24h', async (_req, res) => {
     for (const r of result.recordset) {
       const ts = buildTimestamp(r.Fecha, r.Hora) || ' ';
       const [fecha, hora] = ts.split(' ');
-      for (const p of points) {
+      for (const p of activos) {
         const values = {};
-        for (const prefix of schema.tagsByPoint[p]) values[prefix] = r[`${prefix}_${p}`] ?? null;
-        rows.push({ fecha, hora, bateria: batteryOf(p), punto: p, tipo: gasTipo(p), values });
+        for (const prefix of p.tags) values[prefix] = r[`${prefix}_${p.punto}`] ?? null;
+        rows.push({ fecha, hora, locacion: p.locacion, etiqueta: p.etiqueta, punto: p.punto, values });
       }
     }
 
-    res.json({ variables: schema.variables, baterias: bateriasDe(points), rows });
+    res.json({ variables: schema.variables, locaciones: locacionesDe(activos), rows });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al consultar la base de datos' });
@@ -93,7 +108,8 @@ router.get('/historico', async (req, res) => {
   try {
     const { punto, desde, hasta } = req.query;
     const schema = await getSchema();
-    if (!punto || !schema.points.includes(punto)) {
+    const def = PUNTOS.find((p) => p.punto === punto);
+    if (!def || !schema.points.includes(punto)) {
       return res.status(400).json({ error: 'Punto inválido o no encontrado' });
     }
 
@@ -121,7 +137,8 @@ router.get('/historico', async (req, res) => {
 
     res.json({
       punto,
-      bateria: batteryOf(punto),
+      locacion: def.locacion,
+      etiqueta: def.etiqueta,
       variables: schema.variables.filter((v) => tags.includes(v.key)),
       serie,
     });
