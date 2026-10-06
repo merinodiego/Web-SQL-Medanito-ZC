@@ -32,6 +32,11 @@ const PUNTOS = [
   { punto: '25001', locacion: 'Esquinero y PL', etiqueta: 'Esquinero' },
   { punto: '26001', locacion: 'Busquin', etiqueta: 'Gas General' },
   { punto: '26002', locacion: 'Busquin', etiqueta: 'Gas Control' },
+  { punto: '21002', locacion: 'PTG', etiqueta: 'Gas Combustible' },
+  { punto: '21003', locacion: 'PTG', etiqueta: 'Cholino' },
+  { punto: '21004', locacion: 'PTG', etiqueta: 'PTC' },
+  { punto: '21006', locacion: 'PTG', etiqueta: 'Deshidratadora' },
+  { punto: '21009', locacion: 'PTG', etiqueta: 'PM-320' },
   // Colector Mariposa (28xxx): descartado por ahora (conflicto a resolver).
 ];
 
@@ -142,6 +147,60 @@ router.get('/historico', async (req, res) => {
       variables: schema.variables.filter((v) => tags.includes(v.key)),
       serie,
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al consultar la base de datos' });
+  }
+});
+
+// ---- H2S (caso especial) ----
+// Vive en dbo.Inst_1_min (resolución por minuto), columna H2S_21001. Pertenece a
+// PTG. Se muestra con una tabla de los últimos 24 registros a minuto 0 de cada
+// hora, y aparte un gráfico con TODOS los minutos (filtro de fechas + export).
+const H2S_VARS = [{ key: 'H2S', label: 'H2S', unit: 'ppm', decimals: 3 }];
+const H2S_MAX = 20000; // tope de puntos por consulta del gráfico
+
+// GET /api/gas/h2s24h -> últimos 24 registros al minuto 0 de cada hora.
+router.get('/h2s24h', async (_req, res) => {
+  try {
+    const pool = await getPool();
+    const r = await pool.request().query(`
+      SELECT TOP 24 [Fecha], [Hora], [H2S_21001]
+      FROM [dbo].[Inst_1_min]
+      WHERE DATEPART(MINUTE, [Hora]) = 0
+      ORDER BY [Fecha] DESC, [Hora] DESC
+    `);
+    const rows = r.recordset.map((x) => {
+      const [fecha, hora] = (buildTimestamp(x.Fecha, x.Hora) || ' ').split(' ');
+      return { fecha, hora, values: { H2S: x.H2S_21001 ?? null } };
+    });
+    res.json({ variables: H2S_VARS, rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al consultar la base de datos' });
+  }
+});
+
+// GET /api/gas/h2s-historico?desde=...&hasta=... -> todos los minutos en el rango.
+router.get('/h2s-historico', async (req, res) => {
+  try {
+    const { desde, hasta } = req.query;
+    const pool = await getPool();
+    const r = await pool
+      .request()
+      .input('desde', sql.Date, desde)
+      .input('hasta', sql.Date, hasta)
+      .query(`
+        SELECT TOP ${H2S_MAX} [Fecha], [Hora], [H2S_21001]
+        FROM [dbo].[Inst_1_min]
+        WHERE [Fecha] BETWEEN @desde AND @hasta
+        ORDER BY [Fecha] DESC, [Hora] DESC
+      `);
+    // Viene DESC (lo más reciente primero); se invierte a ASC para el gráfico.
+    const serie = r.recordset
+      .reverse()
+      .map((x) => ({ ts: buildTimestamp(x.Fecha, x.Hora), H2S: x.H2S_21001 ?? null }));
+    res.json({ variables: H2S_VARS, serie, capado: serie.length >= H2S_MAX });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al consultar la base de datos' });

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import client from '../api/client';
 import HourlyTable from '../components/HourlyTable.jsx';
 import HistoricoPanel from '../components/HistoricoPanel.jsx';
+import H2sPanel from '../components/H2sPanel.jsx';
 
 const REFRESH_OPTIONS = [
   { label: 'Manual', ms: 0 },
@@ -42,7 +43,11 @@ export default function Gas() {
   const porLoc = data
     ? data.rows.filter((r) => locacion === null || r.locacion === locacion)
     : [];
-  const etiquetas = [...new Set(porLoc.map((r) => r.etiqueta))];
+  const etiquetasBase = [...new Set(porLoc.map((r) => r.etiqueta))];
+  // H2S es un pseudo-tipo especial (dato por minuto en otra tabla) que aparece
+  // solo dentro de PTG, al lado de PM-320.
+  const etiquetas = locacion === 'PTG' ? [...etiquetasBase, 'H2S'] : etiquetasBase;
+  const mostrarH2S = locacion === 'PTG' && etiqueta === 'H2S';
   const rows = porLoc.filter((r) => etiqueta === null || r.etiqueta === etiqueta);
 
   return (
@@ -117,21 +122,27 @@ export default function Gas() {
             </div>
           </div>
 
-          <p className="mb-2 text-xs text-gray-500">
-            {rows.length} filas · una por hora y punto · clic en una fila para ver el histórico
-          </p>
-          <HourlyTable
-            columns={data.variables}
-            rows={rows}
-            selected={selected?.punto}
-            onRowClick={setSelected}
-            metaBefore={[{ label: 'Locación', get: (r) => r.locacion }]}
-            metaAfter={[{ label: 'Tipo', get: (r) => r.etiqueta }]}
-          />
+          {mostrarH2S ? (
+            <H2sPanel />
+          ) : (
+            <>
+              <p className="mb-2 text-xs text-gray-500">
+                {rows.length} filas · una por hora y punto · clic en una fila para ver el histórico
+              </p>
+              <HourlyTable
+                columns={data.variables}
+                rows={rows}
+                selected={selected?.punto}
+                onRowClick={setSelected}
+                metaBefore={[{ label: 'Locación', get: (r) => r.locacion }]}
+                metaAfter={[{ label: 'Tipo', get: (r) => r.etiqueta }]}
+              />
+            </>
+          )}
         </>
       )}
 
-      {selected && (
+      {!mostrarH2S && selected && (
         <HistoricoPanel
           endpoint="/api/gas/historico"
           params={{ punto: selected.punto }}

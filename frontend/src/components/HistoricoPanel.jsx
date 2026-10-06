@@ -13,8 +13,8 @@ function isoDaysAgo(days) {
 // endpoint: e.g. '/api/inyeccion/historico'  ·  responds { serie, variables }
 // params:   extra query params (e.g. { punto } o { bateria }); las fechas se suman
 // titulo:   encabezado del panel
-export default function HistoricoPanel({ endpoint, params, titulo, onClose }) {
-  const [desde, setDesde] = useState(isoDaysAgo(7));
+export default function HistoricoPanel({ endpoint, params, titulo, onClose, defaultDays = 7 }) {
+  const [desde, setDesde] = useState(isoDaysAgo(defaultDays));
   const [hasta, setHasta] = useState(isoDaysAgo(0));
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
