@@ -59,7 +59,7 @@ export default function Produccion() {
     <div className="p-5">
       <div className="mb-4 flex flex-wrap items-center gap-4">
         <h1 className="text-lg font-semibold text-white">
-          Producción · Últimas 24 h (salida de baterías 02–05)
+          Petróleo · Últimas 24 h (salida de baterías 02–05)
         </h1>
         <div className="ml-auto flex items-center gap-2 text-xs">
           <span className="text-gray-500">Refresco:</span>

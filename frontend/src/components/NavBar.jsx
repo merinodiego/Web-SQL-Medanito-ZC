@@ -2,7 +2,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import Watchdog from './Watchdog.jsx';
 
 const links = [
-  { to: '/produccion', label: 'Producción' },
+  { to: '/petroleo', label: 'Petróleo' },
+  { to: '/gas', label: 'Gas' },
   { to: '/instantaneos', label: 'Instantáneos' },
   { to: '/inyeccion', label: 'Inyección' },
   { to: '/equipos', label: 'Equipos' },

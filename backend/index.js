@@ -10,6 +10,7 @@ const { requireAuth, AUTH_ENABLED } = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
 const produccionRoutes = require('./routes/produccion');
 const inyeccionRoutes = require('./routes/inyeccion');
+const gasRoutes = require('./routes/gas');
 const instantaneosRoutes = require('./routes/instantaneos');
 const watchdogRoutes = require('./routes/watchdog');
 
@@ -29,6 +30,7 @@ app.use('/api/auth', authRoutes);
 // Data routes (protected when AUTH_ENABLED=true)
 app.use('/api/produccion', requireAuth, produccionRoutes);
 app.use('/api/inyeccion', requireAuth, inyeccionRoutes);
+app.use('/api/gas', requireAuth, gasRoutes);
 app.use('/api/instantaneos', requireAuth, instantaneosRoutes);
 
 // --- Production: serve the built frontend from this same process ---

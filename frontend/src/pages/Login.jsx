@@ -16,7 +16,7 @@ export default function Login() {
     try {
       const { data } = await client.post('/api/auth/login', { usuario, password });
       localStorage.setItem('token', data.token);
-      navigate('/produccion');
+      navigate('/petroleo');
     } catch {
       setError('Usuario o contraseña incorrectos');
     } finally {
