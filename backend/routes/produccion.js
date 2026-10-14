@@ -361,4 +361,104 @@ router.get('/controles', async (req, res) => {
   }
 });
 
+// ---- RefiPampa (locación "UAM RefiPampa", tabla dbo.RefiPampa) ----
+// 3 medidores con columnas distintas, mapeadas a variables comunes. 33010 usa las
+// versiones NETO (FQIN/FQHN/FQAN) y DE como densidad (DE=DI, error de config DB).
+const REFI_VARS = [
+  { key: 'FQI', label: 'Caudal', unit: 'm³/h', decimals: 1 },
+  { key: 'FQH', label: 'Vol. Hoy', unit: 'm³', decimals: 1 },
+  { key: 'FQA', label: 'Vol. Ayer', unit: 'm³', decimals: 1 },
+  { key: 'PI', label: 'Presión', unit: 'kg/cm²', decimals: 1 },
+  { key: 'TI', label: 'Temperatura', unit: '°C', decimals: 1 },
+  { key: 'DI', label: 'Densidad', unit: 'gr/cm³', decimals: 4 },
+  { key: 'C3', label: 'C3 (Propano)', unit: '%', decimals: 2 },
+];
+const REFI_MEDIDORES = [
+  { punto: '33010', medidor: 'Medidor 1', cols: { FQI: 'FQIN_33010', FQH: 'FQHN_33010', FQA: 'FQAN_33010', PI: 'PI_33010', TI: 'TI_33010', DI: 'DE_33010' } },
+  { punto: '20011', medidor: 'Masico PTC', cols: { FQI: 'FQI_20011', FQH: 'FQH_20011', FQA: 'FQA_20011', TI: 'TI_20011', DI: 'DI_20011' } },
+  { punto: '32001', medidor: 'Gas RP', cols: { FQI: 'FQI_32001', FQH: 'FQH_32001', FQA: 'FQA_32001', PI: 'PI_32001', TI: 'TI_32001', C3: 'C3_32001' } },
+];
+// Fábrica de endpoints para locaciones con "medidores" de columnas a medida
+// (cada medidor mapea variables comunes a sus columnas reales; "—" donde falta).
+function registrarMedidores(ruta, table, VARS, MEDIDORES) {
+  const ALLCOLS = [...new Set(MEDIDORES.flatMap((m) => Object.values(m.cols)))];
+  const valores = (row, med) => {
+    const v = {};
+    for (const { key } of VARS) {
+      const c = med.cols[key];
+      v[key] = c ? (row[c] ?? null) : null;
+    }
+    return v;
+  };
+
+  router.get(`${ruta}/ultimas24h`, async (_req, res) => {
+    try {
+      const pool = await getPool();
+      const sel = ['[Fecha]', '[Hora]', ...ALLCOLS.map((c) => `[${c}]`)].join(', ');
+      const r = await pool.request().query(`SELECT TOP 24 ${sel} FROM dbo.${table} ORDER BY [Fecha] DESC, [Hora] DESC`);
+      const rows = [];
+      for (const x of r.recordset) {
+        const [fecha, hora] = (buildTimestamp(x.Fecha, x.Hora) || ' ').split(' ');
+        for (const med of MEDIDORES) {
+          rows.push({ fecha, hora, medidor: med.medidor, punto: med.punto, values: valores(x, med) });
+        }
+      }
+      res.json({ variables: VARS, medidores: MEDIDORES.map((m) => m.medidor), rows });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al consultar la base de datos' });
+    }
+  });
+
+  router.get(`${ruta}/historico`, async (req, res) => {
+    try {
+      const { punto, desde, hasta } = req.query;
+      const med = MEDIDORES.find((m) => m.punto === punto);
+      if (!med) return res.status(400).json({ error: 'Medidor inválido o no encontrado' });
+      const keys = Object.keys(med.cols);
+      const sel = ['[Fecha]', '[Hora]', ...keys.map((k) => `[${med.cols[k]}]`)].join(', ');
+      const pool = await getPool();
+      const r = await pool
+        .request()
+        .input('desde', sql.Date, desde)
+        .input('hasta', sql.Date, hasta)
+        .query(`
+          SELECT ${sel}
+          FROM dbo.${table}
+          WHERE [Fecha] BETWEEN @desde AND @hasta
+          ORDER BY [Fecha] ASC, [Hora] ASC
+        `);
+      const serie = r.recordset.map((x) => {
+        const pt = { ts: buildTimestamp(x.Fecha, x.Hora) };
+        for (const k of keys) pt[k] = x[med.cols[k]] ?? null;
+        return pt;
+      });
+      res.json({ punto, medidor: med.medidor, variables: VARS.filter((v) => keys.includes(v.key)), serie });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al consultar la base de datos' });
+    }
+  });
+}
+
+registrarMedidores('/refipampa', 'RefiPampa', REFI_VARS, REFI_MEDIDORES);
+
+// ---- UAM Oldelval (tabla dbo.DBUAM) — 3 medidores ----
+// 23010/23020 son medidores de VOLUMEN (bruto); 20010 mide caudal + calidad.
+// FQIB no existe en DBUAM, se excluye.
+const OLDELVAL_VARS = [
+  { key: 'FQI', label: 'Caudal', unit: 'm³/h', decimals: 1 },
+  { key: 'FQHB', label: 'Vol. Hoy Bruto', unit: 'm³', decimals: 1 },
+  { key: 'FQAB', label: 'Vol. Ayer Bruto', unit: 'm³', decimals: 1 },
+  { key: 'PI', label: 'Presión', unit: 'kg/cm²', decimals: 1 },
+  { key: 'TI', label: 'Temperatura', unit: '°C', decimals: 1 },
+  { key: 'DI', label: 'Densidad', unit: 'gr/cm³', decimals: 4 },
+];
+const OLDELVAL_MEDIDORES = [
+  { punto: '23010', medidor: 'Medidor 1', cols: { FQI: 'Caudal_Bruto1', FQHB: 'FQHB_23010', FQAB: 'FQAB_23010' } },
+  { punto: '23020', medidor: 'Medidor 2', cols: { FQI: 'Caudal_Bruto2', FQHB: 'FQHB_23020', FQAB: 'FQAB_23020' } },
+  { punto: '20010', medidor: 'Masico PTC', cols: { FQI: 'FQI_20010', FQHB: 'FQH_20010', FQAB: 'FQA_20010', PI: 'PI_20010', TI: 'TI_20010', DI: 'DI_20010' } },
+];
+registrarMedidores('/oldelval', 'DBUAM', OLDELVAL_VARS, OLDELVAL_MEDIDORES);
+
 module.exports = router;

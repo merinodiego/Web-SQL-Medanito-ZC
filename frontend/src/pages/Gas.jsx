@@ -3,6 +3,7 @@ import client from '../api/client';
 import HourlyTable from '../components/HourlyTable.jsx';
 import HistoricoPanel from '../components/HistoricoPanel.jsx';
 import H2sPanel from '../components/H2sPanel.jsx';
+import Pm311Panel from '../components/Pm311Panel.jsx';
 
 const REFRESH_OPTIONS = [
   { label: 'Manual', ms: 0 },
@@ -48,6 +49,9 @@ export default function Gas() {
   // solo dentro de PTG, al lado de PM-320.
   const etiquetas = locacion === 'PTG' ? [...etiquetasBase, 'H2S'] : etiquetasBase;
   const mostrarH2S = locacion === 'PTG' && etiqueta === 'H2S';
+  // PM-311 (tabla DB311) es una locación especial que no está en Horarios_Gas.
+  const mostrarPm311 = locacion === 'PM-311';
+  const locaciones = data ? [...data.locaciones, 'PM-311'] : [];
   const rows = porLoc.filter((r) => etiqueta === null || r.etiqueta === etiqueta);
 
   return (
@@ -96,7 +100,7 @@ export default function Gas() {
               >
                 Todas
               </FilterButton>
-              {data.locaciones.map((l) => (
+              {locaciones.map((l) => (
                 <FilterButton
                   key={l}
                   active={locacion === l}
@@ -109,20 +113,24 @@ export default function Gas() {
                 </FilterButton>
               ))}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-gray-500">Tipo:</span>
-              <FilterButton active={etiqueta === null} onClick={() => setEtiqueta(null)}>
-                Todos
-              </FilterButton>
-              {etiquetas.map((e) => (
-                <FilterButton key={e} active={etiqueta === e} onClick={() => setEtiqueta(e)}>
-                  {e}
+            {!mostrarPm311 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-gray-500">Tipo:</span>
+                <FilterButton active={etiqueta === null} onClick={() => setEtiqueta(null)}>
+                  Todos
                 </FilterButton>
-              ))}
-            </div>
+                {etiquetas.map((e) => (
+                  <FilterButton key={e} active={etiqueta === e} onClick={() => setEtiqueta(e)}>
+                    {e}
+                  </FilterButton>
+                ))}
+              </div>
+            )}
           </div>
 
-          {mostrarH2S ? (
+          {mostrarPm311 ? (
+            <Pm311Panel />
+          ) : mostrarH2S ? (
             <H2sPanel />
           ) : (
             <>
@@ -142,7 +150,7 @@ export default function Gas() {
         </>
       )}
 
-      {!mostrarH2S && selected && (
+      {!mostrarH2S && !mostrarPm311 && selected && (
         <HistoricoPanel
           endpoint="/api/gas/historico"
           params={{ punto: selected.punto }}

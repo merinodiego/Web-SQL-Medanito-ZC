@@ -4,6 +4,7 @@ import HourlyTable from '../components/HourlyTable.jsx';
 import TanquesTable from '../components/TanquesTable.jsx';
 import HistoricoPanel from '../components/HistoricoPanel.jsx';
 import ControlesPanel from '../components/ControlesPanel.jsx';
+import MedidoresPanel from '../components/MedidoresPanel.jsx';
 
 const REFRESH_OPTIONS = [
   { label: 'Manual', ms: 0 },
@@ -11,6 +12,9 @@ const REFRESH_OPTIONS = [
   { label: '15 min', ms: 900_000 },
   { label: '30 min', ms: 1_800_000 },
 ];
+
+// Locaciones de Petróleo sin datos aún (placeholders, se completan más adelante).
+const PLACEHOLDERS = ['PTC', 'UAM RefiPampa', 'UAM Oldelval'];
 
 export default function Produccion() {
   const [data, setData] = useState(null);
@@ -47,6 +51,10 @@ export default function Produccion() {
     return () => clearInterval(id);
   }, [refreshMs, load]);
 
+  const esRefiPampa = bateria === 'UAM RefiPampa';
+  const esOldelval = bateria === 'UAM Oldelval';
+  const esMedidores = esRefiPampa || esOldelval;
+  const esPlaceholder = PLACEHOLDERS.includes(bateria) && !esMedidores;
   const tipos = data ? [...new Set(data.rows.map((r) => r.tipo))] : [];
   const rows = data
     ? data.rows.filter(
@@ -121,18 +129,39 @@ export default function Produccion() {
           {/* Filtros (Controles tiene los suyos propios) */}
           {vista !== 'controles' && (
             <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="text-gray-500">Batería:</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-gray-500">Locación:</span>
                 <FilterButton active={bateria === null} onClick={() => setBateria(null)}>
                   Todas
                 </FilterButton>
                 {data.baterias.map((b) => (
-                  <FilterButton key={b} active={bateria === b} onClick={() => setBateria(b)}>
-                    {b}
+                  <FilterButton
+                    key={b}
+                    active={bateria === b}
+                    onClick={() => {
+                      setBateria(b);
+                      setTipo(null);
+                    }}
+                  >
+                    Batería {b}
+                  </FilterButton>
+                ))}
+                {PLACEHOLDERS.map((p) => (
+                  <FilterButton
+                    key={p}
+                    active={bateria === p}
+                    onClick={() => {
+                      setBateria(p);
+                      setTipo(null);
+                      setSelected(null);
+                      setSelTanque(null);
+                    }}
+                  >
+                    {p}
                   </FilterButton>
                 ))}
               </div>
-              {vista === 'produccion' && (
+              {vista === 'produccion' && !esPlaceholder && !esMedidores && (
                 <div className="flex items-center gap-2">
                   <span className="text-gray-500">Tipo:</span>
                   <FilterButton active={tipo === null} onClick={() => setTipo(null)}>
@@ -148,7 +177,24 @@ export default function Produccion() {
             </div>
           )}
 
-          {vista === 'produccion' && (
+          {esPlaceholder && vista !== 'controles' && (
+            <div className="flex h-[55vh] flex-col items-center justify-center text-center">
+              <h2 className="text-2xl font-semibold text-white">{bateria}</h2>
+              <p className="mt-2 text-sm text-gray-400">Locación de Petróleo</p>
+              <span className="mt-4 rounded-full border border-line bg-panel-2 px-4 py-1.5 text-xs text-amber-300">
+                Sin datos todavía · próximamente
+              </span>
+            </div>
+          )}
+
+          {esRefiPampa && vista !== 'controles' && (
+            <MedidoresPanel titulo="UAM RefiPampa" endpointBase="/api/produccion/refipampa" />
+          )}
+          {esOldelval && vista !== 'controles' && (
+            <MedidoresPanel titulo="UAM Oldelval" endpointBase="/api/produccion/oldelval" />
+          )}
+
+          {vista === 'produccion' && !esPlaceholder && !esMedidores && (
             <>
               <p className="mb-2 text-xs text-gray-500">
                 {rows.length} filas · una por hora y punto · clic en una fila para ver el histórico
@@ -164,7 +210,7 @@ export default function Produccion() {
             </>
           )}
 
-          {vista === 'tanques' && tanques && (
+          {vista === 'tanques' && !esPlaceholder && !esMedidores && tanques && (
             <>
               <p className="mb-2 text-xs text-gray-500">
                 Nivel de cada tanque por batería · una fila por hora · en cm · clic en una fila para ver el histórico

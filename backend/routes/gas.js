@@ -207,4 +207,91 @@ router.get('/h2s-historico', async (req, res) => {
   }
 });
 
+// ---- PM-311 (locación especial, tabla dbo.DB311) ----
+// Una sola locación horaria con muchas columnas con nombre (no es "ancha"). Se
+// separan Proceso y Cromatografía (como el SCADA). Conversiones: Poder Calorífico
+// MJ/m³ → Kcal/m³ (×239) y Presión Diferencial mmH2O → mbar (×0.0980665).
+const PM311_PROCESO = [
+  { key: 'caudalCorr', label: 'Caudal Corregido', unit: 'Cm³/h', decimals: 1, col: 'Caudal_Corregido' },
+  { key: 'caudalSinCorr', label: 'Caudal Sin Corregir', unit: 'Sm³/h', decimals: 1, col: 'Caudal_SinCorregir' },
+  { key: 'presDif', label: 'Presión Diferencial', unit: 'kPa', decimals: 2, col: 'Presion_Diferencial', factor: 0.00980665 },
+  { key: 'presion', label: 'Presión Estática', unit: 'kg/cm²', decimals: 1, col: 'Presion' },
+  { key: 'temp', label: 'Temperatura', unit: '°C', decimals: 1, col: 'Temperatura' },
+  { key: 'acumHoy', label: 'Acumulado Hoy', unit: 'Skm³', decimals: 3, col: 'Volumen_Hoy' },
+  { key: 'acumAyer', label: 'Acumulado Ayer', unit: 'Skm³', decimals: 3, col: 'Volumen_Ayer' },
+];
+const PM311_CROMA = [
+  { key: 'densidad', label: 'Densidad', unit: 'sgu', decimals: 4, col: 'Densidad' },
+  { key: 'hv', label: 'Poder Calorífico', unit: 'Kcal/m³', decimals: 0, col: 'HV', factor: 239.0057 },
+  { key: 'n2', label: 'Nitrógeno', unit: '%', decimals: 4, col: 'N2' },
+  { key: 'co2', label: 'CO2', unit: '%', decimals: 4, col: 'CO2' },
+  { key: 'c1', label: 'Metano', unit: '%', decimals: 4, col: 'C1' },
+  { key: 'c2', label: 'Etano', unit: '%', decimals: 4, col: 'C2' },
+  { key: 'c3', label: 'Propano', unit: '%', decimals: 4, col: 'C3' },
+  { key: 'nc4', label: 'N-Butano', unit: '%', decimals: 4, col: 'NC4' },
+  { key: 'ic4', label: 'I-Butano', unit: '%', decimals: 4, col: 'IC4' },
+  { key: 'nc5', label: 'N-Pentano', unit: '%', decimals: 4, col: 'NC5' },
+  { key: 'ic5', label: 'I-Pentano', unit: '%', decimals: 4, col: 'IC5' },
+  { key: 'c6', label: 'N-Hexano', unit: '%', decimals: 4, col: 'C6' },
+  { key: 'c7', label: 'N-Heptano', unit: '%', decimals: 4, col: 'C7' },
+  { key: 'c8', label: 'N-Octano', unit: '%', decimals: 4, col: 'C8' },
+];
+const PM311_ALL = [...PM311_PROCESO, ...PM311_CROMA];
+
+function pm311Valor(row, def) {
+  let v = row[def.col];
+  if (v !== null && v !== undefined && def.factor) v = v * def.factor;
+  return v ?? null;
+}
+
+// GET /api/gas/pm311-24h -> últimas 24 h (una fila por hora), proceso + croma.
+router.get('/pm311-24h', async (_req, res) => {
+  try {
+    const pool = await getPool();
+    const cols = ['[Fecha]', '[Hora]', ...PM311_ALL.map((d) => `[${d.col}]`)].join(', ');
+    const r = await pool
+      .request()
+      .query(`SELECT TOP 24 ${cols} FROM dbo.DB311 WHERE [Caudal_Corregido] <> 0 ORDER BY [Fecha] DESC, [Hora] DESC`);
+    const rows = r.recordset.map((x) => {
+      const [fecha, hora] = (buildTimestamp(x.Fecha, x.Hora) || ' ').split(' ');
+      const values = {};
+      for (const d of PM311_ALL) values[d.key] = pm311Valor(x, d);
+      return { fecha, hora, values };
+    });
+    res.json({ variables: { proceso: PM311_PROCESO, croma: PM311_CROMA }, rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al consultar la base de datos' });
+  }
+});
+
+// GET /api/gas/pm311-historico?grupo=proceso|croma&desde=...&hasta=...
+router.get('/pm311-historico', async (req, res) => {
+  try {
+    const { grupo, desde, hasta } = req.query;
+    const vars = grupo === 'croma' ? PM311_CROMA : PM311_PROCESO;
+    const cols = ['[Fecha]', '[Hora]', ...vars.map((d) => `[${d.col}]`)].join(', ');
+    const pool = await getPool();
+    const r = await pool
+      .request()
+      .input('desde', sql.Date, desde)
+      .input('hasta', sql.Date, hasta)
+      .query(`
+        SELECT ${cols}
+        FROM dbo.DB311
+        WHERE [Fecha] BETWEEN @desde AND @hasta AND [Caudal_Corregido] <> 0
+        ORDER BY [Fecha] ASC, [Hora] ASC
+      `);
+    const serie = r.recordset.map((x) => {
+      const pt = { ts: buildTimestamp(x.Fecha, x.Hora) };
+      for (const d of vars) pt[d.key] = pm311Valor(x, d);
+      return pt;
+    });
+    res.json({ variables: vars, serie });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al consultar la base de datos' });
+  }
+});
+
 module.exports = router;
