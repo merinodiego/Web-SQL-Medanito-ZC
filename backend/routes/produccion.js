@@ -461,4 +461,32 @@ const OLDELVAL_MEDIDORES = [
 ];
 registrarMedidores('/oldelval', 'DBUAM', OLDELVAL_VARS, OLDELVAL_MEDIDORES);
 
+// ---- PTC (locación "PTC", tabla dbo.Horarios_Oil) — 2 medidores ----
+// FW2 = punto 20036 (sin Inventario), FW3 = punto 20045 (con Inventario).
+const PTC_VARS = [
+  { key: 'FQI', label: 'Caudal', unit: 'm³/h', decimals: 1 },
+  { key: 'FQH', label: 'Vol. Hoy', unit: 'm³', decimals: 1 },
+  { key: 'FQA', label: 'Vol. Ayer', unit: 'm³', decimals: 1 },
+  { key: 'PI', label: 'Presión', unit: 'kg/cm²', decimals: 1 },
+  { key: 'TI', label: 'Temperatura', unit: '°C', decimals: 1 },
+  { key: 'DI', label: 'Densidad', unit: 'gr/cm³', decimals: 4 },
+  { key: 'FQINV', label: 'Inventario', unit: 'm³', decimals: 1 },
+];
+const PTC_MEDIDORES = [
+  { punto: '20036', medidor: 'FW2', cols: { FQI: 'FQI_20036', FQH: 'FQH_20036', FQA: 'FQA_20036', PI: 'PI_20036', TI: 'TI_20036', DI: 'DI_20036' } },
+  { punto: '20045', medidor: 'FW3', cols: { FQI: 'FQI_20045', FQH: 'FQH_20045', FQA: 'FQA_20045', PI: 'PI_20045', TI: 'TI_20045', DI: 'DI_20045', FQINV: 'FQINV_20045' } },
+];
+registrarMedidores('/ptc', 'Horarios_Oil', PTC_VARS, PTC_MEDIDORES);
+
+// Niveles de PTC: cada tanque es un "medidor" con Nivel (LI) y Volumen (VI).
+const PTC_NIVELES_VARS = [
+  { key: 'LI', label: 'Nivel', unit: 'cm', decimals: 1 },
+  { key: 'VI', label: 'Volumen', unit: 'm³', decimals: 1 },
+];
+const PTC_NIVELES_MEDIDORES = [
+  { punto: '20025', medidor: 'Tanque 80', cols: { LI: 'LI_20025', VI: 'VI_20025' } },
+  { punto: '20040', medidor: 'Tanque 1200', cols: { LI: 'LI_20040', VI: 'VI_20040' } },
+];
+registrarMedidores('/ptc-niveles', 'Horarios_Oil', PTC_NIVELES_VARS, PTC_NIVELES_MEDIDORES);
+
 module.exports = router;

@@ -210,15 +210,18 @@ router.get('/h2s-historico', async (req, res) => {
 // ---- PM-311 (locación especial, tabla dbo.DB311) ----
 // Una sola locación horaria con muchas columnas con nombre (no es "ancha"). Se
 // separan Proceso y Cromatografía (como el SCADA). Conversiones: Poder Calorífico
-// MJ/m³ → Kcal/m³ (×239) y Presión Diferencial mmH2O → mbar (×0.0980665).
+// MJ/m³ → Kcal/m³ (×239) y Presión Diferencial mmH2O → kPa (×0.00980665).
+// Energia_Hoy/Ayer son el volumen corregido (ya vienen en km³, sin conversión).
 const PM311_PROCESO = [
-  { key: 'caudalCorr', label: 'Caudal Corregido', unit: 'Cm³/h', decimals: 1, col: 'Caudal_Corregido' },
   { key: 'caudalSinCorr', label: 'Caudal Sin Corregir', unit: 'Sm³/h', decimals: 1, col: 'Caudal_SinCorregir' },
-  { key: 'presDif', label: 'Presión Diferencial', unit: 'kPa', decimals: 2, col: 'Presion_Diferencial', factor: 0.00980665 },
-  { key: 'presion', label: 'Presión Estática', unit: 'kg/cm²', decimals: 1, col: 'Presion' },
-  { key: 'temp', label: 'Temperatura', unit: '°C', decimals: 1, col: 'Temperatura' },
+  { key: 'caudalCorr', label: 'Caudal Corregido', unit: 'Cm³/h', decimals: 1, col: 'Caudal_Corregido' },
   { key: 'acumHoy', label: 'Acumulado Hoy', unit: 'Skm³', decimals: 3, col: 'Volumen_Hoy' },
-  { key: 'acumAyer', label: 'Acumulado Ayer', unit: 'Skm³', decimals: 3, col: 'Volumen_Ayer' },
+  { key: 'volCorrHoy', label: 'Vol. Corr. Hoy', unit: 'Ckm³', decimals: 3, col: 'Energia_Hoy' },
+  { key: 'acumAyer', label: 'Volumen Ayer', unit: 'Skm³', decimals: 3, col: 'Volumen_Ayer' },
+  { key: 'volCorrAyer', label: 'Vol. Corr. Ayer', unit: 'Ckm³', decimals: 3, col: 'Energia_Ayer' },
+  { key: 'presDif', label: 'Pres Dif', unit: 'kPa', decimals: 2, col: 'Presion_Diferencial', factor: 0.00980665 },
+  { key: 'presion', label: 'Pres.', unit: 'kg/cm²', decimals: 1, col: 'Presion' },
+  { key: 'temp', label: 'Temp.', unit: '°C', decimals: 1, col: 'Temperatura' },
 ];
 const PM311_CROMA = [
   { key: 'densidad', label: 'Densidad', unit: 'sgu', decimals: 4, col: 'Densidad' },

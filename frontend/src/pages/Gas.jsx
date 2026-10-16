@@ -55,40 +55,41 @@ export default function Gas() {
   const rows = porLoc.filter((r) => etiqueta === null || r.etiqueta === etiqueta);
 
   return (
-    <div className="p-5">
-      <div className="mb-4 flex flex-wrap items-center gap-4">
-        <h1 className="text-lg font-semibold text-white">Gas · Últimas 24 h</h1>
-        <div className="ml-auto flex items-center gap-2 text-xs">
-          <span className="text-gray-500">Refresco:</span>
-          {REFRESH_OPTIONS.map((o) => (
+    <div>
+      {/* Franja superior fija: título y filtros */}
+      <div className="sticky top-14 z-20 border-b border-line bg-panel px-5 pt-4 pb-3">
+        <div className="flex flex-wrap items-center gap-4">
+          <h1 className="text-lg font-semibold text-white">Gas · Últimas 24 h</h1>
+          <div className="ml-auto flex items-center gap-2 text-xs">
+            <span className="text-gray-500">Refresco:</span>
+            {REFRESH_OPTIONS.map((o) => (
+              <button
+                key={o.ms}
+                onClick={() => setRefreshMs(o.ms)}
+                className={`rounded px-2 py-1 ${
+                  refreshMs === o.ms ? 'bg-amber-500/20 text-amber-300' : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
             <button
-              key={o.ms}
-              onClick={() => setRefreshMs(o.ms)}
-              className={`rounded px-2 py-1 ${
-                refreshMs === o.ms ? 'bg-amber-500/20 text-amber-300' : 'text-gray-400 hover:text-gray-200'
-              }`}
+              onClick={load}
+              className="rounded border border-line px-2 py-1 text-gray-300 hover:bg-panel-2"
             >
-              {o.label}
+              Actualizar
             </button>
-          ))}
-          <button
-            onClick={load}
-            className="rounded border border-line px-2 py-1 text-gray-300 hover:bg-panel-2"
-          >
-            Actualizar
-          </button>
+          </div>
         </div>
-      </div>
 
-      {error && (
-        <div className="mb-4 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
-          {error}
-        </div>
-      )}
+        {error && (
+          <div className="mt-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            {error}
+          </div>
+        )}
 
-      {data && (
-        <>
-          <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+        {data && (
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-gray-500">Locación:</span>
               <FilterButton
@@ -127,8 +128,13 @@ export default function Gas() {
               </div>
             )}
           </div>
+        )}
+      </div>
 
-          {mostrarPm311 ? (
+      {/* Contenido scrolleable */}
+      <div className="px-5 pb-5 pt-3">
+        {data &&
+          (mostrarPm311 ? (
             <Pm311Panel />
           ) : mostrarH2S ? (
             <H2sPanel />
@@ -146,18 +152,17 @@ export default function Gas() {
                 metaAfter={[{ label: 'Tipo', get: (r) => r.etiqueta }]}
               />
             </>
-          )}
-        </>
-      )}
+          ))}
 
-      {!mostrarH2S && !mostrarPm311 && selected && (
-        <HistoricoPanel
-          endpoint="/api/gas/historico"
-          params={{ punto: selected.punto }}
-          titulo={`Histórico · ${selected.locacion} · ${selected.etiqueta} (${selected.punto})`}
-          onClose={() => setSelected(null)}
-        />
-      )}
+        {!mostrarH2S && !mostrarPm311 && selected && (
+          <HistoricoPanel
+            endpoint="/api/gas/historico"
+            params={{ punto: selected.punto }}
+            titulo={`Histórico · ${selected.locacion} · ${selected.etiqueta} (${selected.punto})`}
+            onClose={() => setSelected(null)}
+          />
+        )}
+      </div>
     </div>
   );
 }

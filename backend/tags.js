@@ -13,10 +13,13 @@ const { sql, getPool } = require('./db');
 const TAG_DEFS = {
   FQI: { label: 'Caudal', unit: 'm³/h', decimals: 1 },
   FQH: { label: 'Vol. Hoy', unit: 'm³', decimals: 1 },
+  WCH: { label: 'Corte de Agua Hoy', unit: '%', decimals: 1 },
   FQA: { label: 'Vol. Ayer', unit: 'm³', decimals: 1 },
+  WCA: { label: 'Corte de Agua Ayer', unit: '%', decimals: 1 },
   PI: { label: 'Presión', unit: 'kg/cm²', decimals: 1 },
   TI: { label: 'Temperatura', unit: '°C', decimals: 1 },
   DI: { label: 'Densidad', unit: 'gr/cm³', decimals: 4 },
+  FQINV: { label: 'Inventario', unit: 'm³', decimals: 1 },
 };
 
 // Battery number derived from a point id (first two digits): 02010 -> 2.

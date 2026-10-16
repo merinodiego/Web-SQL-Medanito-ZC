@@ -27,8 +27,9 @@ export default function Instantaneos() {
   const actualizado = data?.ts ? new Date(data.ts).toLocaleTimeString('es-AR') : null;
 
   return (
-    <div className="p-5">
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+    <div>
+      {/* Franja superior fija */}
+      <div className="sticky top-14 z-20 flex flex-wrap items-center gap-3 border-b border-line bg-panel px-5 py-4">
         <h1 className="text-lg font-semibold text-white">Instantáneos · Tiempo real</h1>
         <span className="flex items-center gap-1 text-xs text-gray-500">
           <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
@@ -39,23 +40,26 @@ export default function Instantaneos() {
         )}
       </div>
 
-      {error && (
-        <div className="mb-4 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
-          {error}
-        </div>
-      )}
+      {/* Contenido scrolleable */}
+      <div className="px-5 pb-5 pt-3">
+        {error && (
+          <div className="mb-4 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            {error}
+          </div>
+        )}
 
-      {data && data.baterias.length === 0 && !error && (
-        <p className="text-sm text-gray-500">Esperando datos del SCADA…</p>
-      )}
+        {data && data.baterias.length === 0 && !error && (
+          <p className="text-sm text-gray-500">Esperando datos del SCADA…</p>
+        )}
 
-      {data && data.baterias.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {data.baterias.map((b) => (
-            <BateriaCard key={b.bateria} bateria={b.bateria} variables={data.variables} values={b.values} />
-          ))}
-        </div>
-      )}
+        {data && data.baterias.length > 0 && (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {data.baterias.map((b) => (
+              <BateriaCard key={b.bateria} bateria={b.bateria} variables={data.variables} values={b.values} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -20,7 +20,7 @@ export default function NavBar() {
   }
 
   return (
-    <header className="flex items-center gap-5 border-b border-line bg-panel-2 px-5 py-3">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-5 border-b border-line bg-panel-2 px-5">
       {/* Logo Ribeiro. El JPG viene con fondo casi negro; mix-blend lighten lo
           funde con la barra oscura y deja ver solo el logo. */}
       <img

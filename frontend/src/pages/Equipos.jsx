@@ -76,11 +76,14 @@ function cell(value) {
 
 export default function Equipos() {
   return (
-    <div className="p-5">
-      <h1 className="mb-1 text-lg font-semibold text-white">Equipos · Tanques y Piletas</h1>
-      <p className="mb-4 text-xs text-gray-500">Información de referencia (estática)</p>
+    <div>
+      {/* Franja superior fija */}
+      <div className="sticky top-14 z-20 border-b border-line bg-panel px-5 py-4">
+        <h1 className="text-lg font-semibold text-white">Equipos · Tanques y Piletas</h1>
+        <p className="mt-1 text-xs text-gray-500">Información de referencia (estática)</p>
+      </div>
 
-      <div className="overflow-auto rounded-lg border border-line">
+      <div className="m-5 overflow-auto rounded-lg border border-line">
         <table className="w-full border-collapse text-sm">
           <thead className="sticky top-0 z-10 bg-panel-2 text-gray-400">
             <tr>
