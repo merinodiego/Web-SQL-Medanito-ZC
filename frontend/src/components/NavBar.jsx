@@ -8,6 +8,7 @@ const links = [
   { to: '/inyeccion', label: 'Inyección' },
   { to: '/equipos', label: 'Equipos' },
   { to: '/gestion', label: 'Gestión' },
+  { to: '/mapa', label: 'Mapa' },
 ];
 
 export default function NavBar() {

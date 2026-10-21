@@ -6,6 +6,7 @@ import Instantaneos from './pages/Instantaneos.jsx';
 import Gas from './pages/Gas.jsx';
 import Inyeccion from './pages/Inyeccion.jsx';
 import Equipos from './pages/Equipos.jsx';
+import Mapa from './pages/Mapa.jsx';
 import Placeholder from './pages/Placeholder.jsx';
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/gas" element={<Gas />} />
           <Route path="/inyeccion" element={<Inyeccion />} />
           <Route path="/equipos" element={<Equipos />} />
+          <Route path="/mapa" element={<Mapa />} />
           <Route
             path="/gestion"
             element={<Placeholder titulo="Gestión" detalle="KPIs y eficiencia de campo" />}
