@@ -473,7 +473,7 @@ const PTC_VARS = [
   { key: 'FQINV', label: 'Inventario', unit: 'm³', decimals: 1 },
 ];
 const PTC_MEDIDORES = [
-  { punto: '20036', medidor: 'FW2', cols: { FQI: 'FQI_20036', FQH: 'FQH_20036', FQA: 'FQA_20036', PI: 'PI_20036', TI: 'TI_20036', DI: 'DI_20036' } },
+  { punto: '20036', medidor: 'FW2', cols: { FQI: 'FQI_20036', FQH: 'FQH_20036', FQA: 'FQA_20036', PI: 'PI_20036', TI: 'TI_20036', DI: 'DI_20036', FQINV: 'FQINV_20036' } },
   { punto: '20045', medidor: 'FW3', cols: { FQI: 'FQI_20045', FQH: 'FQH_20045', FQA: 'FQA_20045', PI: 'PI_20045', TI: 'TI_20045', DI: 'DI_20045', FQINV: 'FQINV_20045' } },
 ];
 registrarMedidores('/ptc', 'Horarios_Oil', PTC_VARS, PTC_MEDIDORES);

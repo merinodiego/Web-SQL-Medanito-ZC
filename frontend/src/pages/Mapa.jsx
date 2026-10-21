@@ -20,11 +20,12 @@ const PUNTOS = [
 ];
 
 // Variables a mostrar en el popup: [clave en values, etiqueta, unidad].
+// DBInst (tiempo real) tiene las 6 estándar; mostramos las más relevantes.
 const POPUP_VARS = [
   ['FQI', 'Caudal', 'm³/h'],
   ['FQH', 'Vol. Hoy', 'm³'],
-  ['WCH', 'Corte Agua', '%'],
   ['PI', 'Presión', 'kg/cm²'],
+  ['TI', 'Temperatura', '°C'],
 ];
 
 // Imagen satelital del campo (cenital, norte arriba), 1478×1007 px.
@@ -42,22 +43,26 @@ export default function Mapa() {
   const mapRef = useRef(null);
   const markersRef = useRef({});
   const [clicked, setClicked] = useState(null);
-  const [vivos, setVivos] = useState(null); // { punto: fila }
+  const [vivos, setVivos] = useState(null); // { byBat: { 2: values, ... }, ts }
 
-  // Última lectura por punto (Producción).
+  // Valores en tiempo real desde DBInst (una fila por batería, ~1 min).
   const cargar = useCallback(async () => {
     try {
-      const { data } = await client.get('/api/produccion/ultimas24h');
-      const latest = {};
-      for (const r of data.rows) if (!latest[r.punto]) latest[r.punto] = r; // newest-first
-      setVivos(latest);
+      const { data } = await client.get('/api/instantaneos');
+      const byBat = {};
+      for (const b of data.baterias) byBat[b.bateria] = b.values;
+      setVivos({ byBat, ts: data.ts });
     } catch {
       /* sin datos en vivo; el mapa igual se muestra */
     }
   }, []);
 
+  // Carga al abrir la página y refresca cada 1 min (DBInst se actualiza a esa
+  // frecuencia). Se limpia el intervalo al salir de la vista.
   useEffect(() => {
     cargar();
+    const id = setInterval(cargar, 60_000);
+    return () => clearInterval(id);
   }, [cargar]);
 
   // Inicializa el mapa una sola vez.
@@ -99,27 +104,26 @@ export default function Mapa() {
     };
   }, []);
 
-  // Rellena los popups con los datos en vivo cuando llegan.
+  // Rellena los popups con los datos en vivo (por batería) cuando llegan.
   useEffect(() => {
+    const hora = vivos?.ts ? new Date(vivos.ts).toLocaleTimeString('es-AR') : null;
     for (const p of PUNTOS) {
       const m = markersRef.current[p.nombre];
       if (!m) continue;
       let html = `<b>${p.nombre}</b>`;
-      if (p.prov) html += ` <span style="color:#f59e0b">· pos. aprox.</span>`;
-      if (p.punto) {
-        html += `<br/><span style="color:#9ca3af">punto ${p.punto}</span>`;
-        const r = vivos?.[p.punto];
-        if (r) {
-          html += `<br/><span style="color:#9ca3af">${r.fecha} ${r.hora}</span><table style="margin-top:4px;border-collapse:collapse">`;
-          for (const [k, label, unit] of POPUP_VARS) {
-            const v = r.values?.[k];
-            const txt = v === null || v === undefined ? '—' : Number(v).toFixed(1);
-            html += `<tr><td style="padding-right:10px;color:#9ca3af">${label}</td><td style="text-align:right">${txt} ${unit}</td></tr>`;
-          }
-          html += `</table>`;
-        } else if (vivos) {
-          html += `<br/><span style="color:#9ca3af">sin datos</span>`;
+      const bat = p.punto ? parseInt(p.punto.slice(0, 2), 10) : null;
+      const vals = bat != null && vivos?.byBat ? vivos.byBat[bat] : null;
+      if (vals) {
+        if (hora) html += `<br/><span style="color:#34d399">● en vivo · ${hora}</span>`;
+        html += `<table style="margin-top:4px;border-collapse:collapse">`;
+        for (const [k, label, unit] of POPUP_VARS) {
+          const v = vals[k];
+          const txt = v === null || v === undefined ? '—' : Number(v).toFixed(1);
+          html += `<tr><td style="padding-right:10px;color:#9ca3af">${label}</td><td style="text-align:right">${txt} ${unit}</td></tr>`;
         }
+        html += `</table>`;
+      } else if (p.punto && vivos) {
+        html += `<br/><span style="color:#9ca3af">sin datos en vivo</span>`;
       }
       m.setPopupContent(html);
     }
