@@ -14,11 +14,16 @@ const COLORS = [
   '#a3e635', '#38bdf8', '#c084fc', '#facc15', '#4ade80', '#e879f9', '#fca5a5', '#93c5fd',
 ];
 
+// Variables de inventario/totalizador: son números grandes que distorsionan el
+// escalado del eje Y, por eso arrancan ocultas por default.
+const esInventario = (v) => v.key === 'FQINV' || /inventario/i.test(v.label || '');
+
 // Gráfico de series temporales con checkbox por variable: cada una se puede
 // mostrar u ocultar, y al ocultarla el eje Y se reescala a las visibles (útil
 // cuando hay rangos muy dispares). variables: [{ key, label, unit }].
 export default function TrendChart({ data, variables }) {
-  const [hidden, setHidden] = useState(() => new Set());
+  // Por default se muestran todas MENOS las de inventario (escala muy grande).
+  const [hidden, setHidden] = useState(() => new Set((variables || []).filter(esInventario).map((v) => v.key)));
 
   if (!data?.length) {
     return (

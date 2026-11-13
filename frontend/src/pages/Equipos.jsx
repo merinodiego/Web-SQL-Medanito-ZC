@@ -4,9 +4,9 @@ const GRUPOS = [
   {
     titulo: 'Batería 2',
     filas: [
-      { tanque: 'A', tag: 'LI-02021', tipo: 'Tanque', h: 245, vol: 40, cte: 0.163 },
+      { tanque: 'A', tag: 'LI-02021', tipo: 'Tanque', h: 455, vol: 160, cte: 0.352 },
       { tanque: 'B', tag: 'LI-02022', tipo: 'Tanque', h: 370, vol: 80, cte: 0.216 },
-      { tanque: 'C', tag: 'LI-02023', tipo: 'Tanque', h: 455, vol: 160, cte: 0.352, obs: 'Fuera Servicio' },
+      { tanque: 'C', tag: 'LI-02023', tipo: 'Tanque', h: 245, vol: 40, cte: 0.163, obs: 'Fuera Servicio' },
     ],
   },
   {
